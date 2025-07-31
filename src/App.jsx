@@ -1,21 +1,22 @@
 import { useState } from "react";
-import WorkspaceSelector from "./components/WorkspaceSelector";
+import AppToolbar from "./components/AppToolbar";
 import TiledViewer from "./components/TiledViewer";
-import "./App.css";
-import TestViewer from "./components/TestViewer";
 
 export default function App() {
   const [workspaceId, setWorkspaceId] = useState(null);
 
   return (
-    <div className="app-container">
-      <div className="app-toolbar">
-        <WorkspaceSelector onSelect={setWorkspaceId} />
+    <div className="flex flex-col h-screen">
+      <AppToolbar onWorkspaceSelect={setWorkspaceId} />
+      <div className="flex-1">
+        {workspaceId ? (
+          <TiledViewer workspaceId={workspaceId} />
+        ) : (
+          <div className="h-full flex items-center justify-center text-red-200">
+            Please select a workspace.
+          </div>
+        )}
       </div>
-      <div className="app-content">
-        {workspaceId && <TiledViewer workspaceId={workspaceId} />}
-      </div>
-      {/* <TestViewer /> */}
     </div>
   );
 }

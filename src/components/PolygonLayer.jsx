@@ -1,22 +1,36 @@
 import { useMemo } from "react";
+import { useSelector, useDispatch } from "react-redux";
 import { Line, Circle } from "react-konva";
 import RBush from "rbush";
 import { getBoundingBox } from "../utils/geometry";
+import {
+  setSelectedPolygon,
+  updatePolygonVertices,
+  setHoveredVertex,
+  setSelectedVertex,
+} from "../store/polygonsSlice"; // adjust import path
 
 export default function PolygonLayer({
-  polygons,
   pageOffsets,
   zoomLevel,
   visualScale,
   viewport,
-  selectedPolygon,
-  onSelect,
-  onUpdateVertex,
-  hoveredVertex,
-  onHoverVertex,
-  selectedVertex,
-  onSelectVertex,
+  scale,
 }) {
+  const dispatch = useDispatch();
+
+  const polygons = useSelector((state) => state.polygons.polygons);
+  const selectedPolygonId = useSelector(
+    (state) => state.polygons.selectedPolygonId
+  );
+  const selectedVertex = useSelector((state) => state.polygons.selectedVertex);
+  const hoveredVertex = useSelector((state) => state.polygons.hoveredVertex);
+
+  const selectedPolygon = useMemo(
+    () => polygons.find((p) => p.id === selectedPolygonId),
+    [polygons, selectedPolygonId]
+  );
+
   const zoomFactor = Math.pow(2, zoomLevel - 6);
 
   // Build spatial index of all polygons with scaled positions
@@ -46,7 +60,6 @@ export default function PolygonLayer({
     return tree;
   }, [polygons, pageOffsets, zoomLevel]);
 
-  // Separate visible polygons into selected and others
   const { selectedItem, others } = useMemo(() => {
     let selectedItem = null;
     const others = [];
@@ -57,7 +70,7 @@ export default function PolygonLayer({
       maxX: viewport.x + viewport.width,
       maxY: viewport.y + viewport.height,
     })) {
-      if (selectedPolygon?.id === poly.id) {
+      if (selectedPolygonId === poly.id) {
         selectedItem = poly;
       } else {
         others.push(poly);
@@ -65,9 +78,8 @@ export default function PolygonLayer({
     }
 
     return { selectedItem, others };
-  }, [polygonIndex, viewport, selectedPolygon]);
+  }, [polygonIndex, viewport, selectedPolygonId]);
 
-  // Render background polygons
   const backgroundPolygons = others.map((poly) => (
     <Line
       key={`poly-${poly.id}`}
@@ -76,24 +88,22 @@ export default function PolygonLayer({
       stroke="green"
       strokeWidth={2 / visualScale}
       opacity={0.4}
-      onClick={() => onSelect(poly.raw)}
+      onClick={() => dispatch(setSelectedPolygon(poly.id))}
     />
   ));
 
-  // Render selected polygon (if any)
   const selectedShape = selectedItem && (
     <Line
-      key={`selected-${selectedItem.page_number}-${selectedItem.polygon_id}`}
+      key={`selected-${selectedItem.id}`}
       points={selectedItem.scaledVertices.flat()}
       closed
       stroke="blue"
-      strokeWidth={3 / visualScale}
+      strokeWidth={0.3 / Math.max(1, scale) * 6}
       opacity={0.8}
-      onClick={() => onSelect(selectedItem.raw)}
+      onClick={() => dispatch(setSelectedPolygon(selectedItem.id))}
     />
   );
 
-  // Render editable vertices for the selected polygon
   const vertexHandles =
     selectedPolygon?.vertices?.[0]?.map(([x, y], index) => {
       const pageOffsetY = pageOffsets[selectedPolygon.page_number - 1] || 0;
@@ -101,24 +111,31 @@ export default function PolygonLayer({
       const scaledY = y * zoomFactor + pageOffsetY;
 
       const isHovered =
-        hoveredVertex?.polygonId === selectedPolygon.polygon_id &&
+        hoveredVertex?.polygonId === selectedPolygon.id &&
         hoveredVertex?.index === index;
 
       const isSelected =
-        selectedVertex?.polygonId === selectedPolygon.polygon_id &&
+        selectedVertex?.polygonId === selectedPolygon.id &&
         selectedVertex?.index === index;
+
+      const radius = isSelected ? 1.5 : 1.2;
 
       return (
         <Circle
           key={`v-${index}`}
           x={scaledX}
           y={scaledY}
-          radius={isSelected ? 8 / visualScale : 6 / visualScale}
+          radius={radius / Math.max(1, scale) * 3}
           fill={isHovered ? "yellow" : isSelected ? "blue" : "red"}
           draggable
           onMouseDown={(e) => (e.cancelBubble = true)}
           onTouchStart={(e) => (e.cancelBubble = true)}
-          onDragStart={(e) => (e.cancelBubble = true)}
+          onDragStart={(e) => {
+            e.cancelBubble = true;
+            dispatch(
+              setSelectedVertex({ polygonId: selectedPolygon.id, index })
+            );
+          }}
           onDragMove={(e) => {
             e.cancelBubble = true;
 
@@ -128,18 +145,22 @@ export default function PolygonLayer({
             const updated = [...selectedPolygon.vertices[0]];
             updated[index] = [newX, newY];
 
-            onUpdateVertex({
-              ...selectedPolygon,
-              vertices: [updated],
-            });
+            dispatch(
+              updatePolygonVertices({
+                polygonId: selectedPolygon.id,
+                vertices: updated,
+              })
+            );
           }}
           onDragEnd={(e) => (e.cancelBubble = true)}
           onMouseEnter={() =>
-            onHoverVertex?.({ polygonId: selectedPolygon.polygon_id, index })
+            dispatch(setHoveredVertex({ polygonId: selectedPolygon.id, index }))
           }
-          onMouseLeave={() => onHoverVertex?.(null)}
+          onMouseLeave={() => dispatch(setHoveredVertex(null))}
           onClick={() =>
-            onSelectVertex?.({ polygonId: selectedPolygon.polygon_id, index })
+            dispatch(
+              setSelectedVertex({ polygonId: selectedPolygon.id, index })
+            )
           }
         />
       );
