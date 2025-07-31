@@ -52,6 +52,7 @@ export default function TileLayer({ pages, workspaceId, zoomLevel, viewport }) {
                 y={tileY}
                 width={tileW}
                 height={tileH}
+                name="background"
               />
             );
           }

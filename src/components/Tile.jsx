@@ -18,6 +18,6 @@ export default function Tile({ src, x, y, width, height }) {
   }, [src]);
 
   return image ? (
-    <KonvaImage image={image} x={x} y={y} width={width} height={height} />
+    <KonvaImage image={image} x={x} y={y} width={width} height={height} name="background"/>
   ) : null;
 }

@@ -2,6 +2,7 @@ import { useState } from "react";
 import WorkspaceSelector from "./components/WorkspaceSelector";
 import TiledViewer from "./components/TiledViewer";
 import "./App.css";
+import TestViewer from "./components/TestViewer";
 
 export default function App() {
   const [workspaceId, setWorkspaceId] = useState(null);
@@ -14,6 +15,7 @@ export default function App() {
       <div className="app-content">
         {workspaceId && <TiledViewer workspaceId={workspaceId} />}
       </div>
+      {/* <TestViewer /> */}
     </div>
   );
 }
