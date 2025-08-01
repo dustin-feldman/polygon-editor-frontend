@@ -85,10 +85,10 @@ export default function TiledViewer({ workspaceId }) {
   const [pages, setPages] = useState([]);
   useEffect(() => {
     api
-      .get(`/workspaces/${workspaceId}/pages`)
+      .get(`/workspaces/${workspaceId}/pages/`)
       .then((res) => setPages(res.data || []));
     api
-      .get(`/workspaces/${workspaceId}/polygons`)
+      .get(`/workspaces/${workspaceId}/polygons/`)
       .then((res) => dispatch(setPolygons(res.data || [])));
   }, [workspaceId, dispatch]);
 
