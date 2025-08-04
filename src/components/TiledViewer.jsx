@@ -13,14 +13,6 @@ import {
 import Swal from "sweetalert2";
 import { showError, showSuccess } from "../utils/toast";
 
-const Toast = Swal.mixin({
-  toast: true,
-  position: "top-end",
-  showConfirmButton: false,
-  timer: 3000,
-  timerProgressBar: true,
-});
-
 export default function TiledViewer({ workspaceId }) {
   const containerRef = useRef();
   const stageRef = useRef();
@@ -69,17 +61,18 @@ export default function TiledViewer({ workspaceId }) {
   }, []);
 
   useEffect(() => {
-    const updateSize = () => {
-      if (containerRef.current) {
-        setContainerSize({
-          width: containerRef.current.clientWidth,
-          height: containerRef.current.clientHeight,
-        });
+    if (!containerRef.current) return;
+
+    const observer = new ResizeObserver((entries) => {
+      for (let entry of entries) {
+        const { width, height } = entry.contentRect;
+        setContainerSize({ width, height });
       }
-    };
-    updateSize();
-    window.addEventListener("resize", updateSize);
-    return () => window.removeEventListener("resize", updateSize);
+    });
+
+    observer.observe(containerRef.current);
+
+    return () => observer.disconnect();
   }, []);
 
   const [pages, setPages] = useState([]);
@@ -225,46 +218,48 @@ export default function TiledViewer({ workspaceId }) {
   };
 
   return (
-    <div ref={containerRef} style={{ width: "100%", height: "100%" }}>
-      <Stage
-        ref={stageRef}
-        width={containerSize.width}
-        height={containerSize.height}
-        onWheel={handleWheel}
-        onMouseDown={handleMouseDown}
-        onMouseUp={handleKonvaMouseUp}
-      >
-        <Layer>
-          <Group
-            scale={{ x: visualScale, y: visualScale }}
-            x={position.x}
-            y={position.y}
-          >
-            <Rect
-              name="background"
-              x={-10000}
-              y={-10000}
-              width={20000}
-              height={20000}
-              fill="#f8f8f8"
-              opacity={0}
-            />
-            <TileLayer
-              pages={pages}
-              workspaceId={workspaceId}
-              zoomLevel={zoomLevel}
-              viewport={viewport}
-            />
-            <PolygonLayer
-              pageOffsets={pageOffsets}
-              zoomLevel={zoomLevel}
-              visualScale={visualScale}
-              viewport={viewport}
-              scale={scale}
-            />
-          </Group>
-        </Layer>
-      </Stage>
+    <div ref={containerRef} className="w-full h-full relative">
+      <div className="w-full h-full absolute">
+        <Stage
+          ref={stageRef}
+          width={containerSize.width}
+          height={containerSize.height}
+          onWheel={handleWheel}
+          onMouseDown={handleMouseDown}
+          onMouseUp={handleKonvaMouseUp}
+        >
+          <Layer>
+            <Group
+              scale={{ x: visualScale, y: visualScale }}
+              x={position.x}
+              y={position.y}
+            >
+              <Rect
+                name="background"
+                x={-10000}
+                y={-10000}
+                width={20000}
+                height={20000}
+                fill="#f8f8f8"
+                opacity={0}
+              />
+              <TileLayer
+                pages={pages}
+                workspaceId={workspaceId}
+                zoomLevel={zoomLevel}
+                viewport={viewport}
+              />
+              <PolygonLayer
+                pageOffsets={pageOffsets}
+                zoomLevel={zoomLevel}
+                visualScale={visualScale}
+                viewport={viewport}
+                scale={scale}
+              />
+            </Group>
+          </Layer>
+        </Stage>
+      </div>
     </div>
   );
 }
